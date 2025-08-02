@@ -212,7 +212,7 @@ class BorderRenderer:
     def draw_animated_thinking_border(self, surface: pygame.Surface, 
                                     speed: float = 1.0, border_width: int = None,
                                     margin: int = None):
-        """思考中状態用のアニメーション外枠
+        """思考中状態用のアニメーション外枠（ランダム色切り替え）
         
         Args:
             surface: 描画対象のサーフェス
@@ -223,26 +223,30 @@ class BorderRenderer:
         if border_width is None:
             border_width = self.default_border_width
             
-        # ランダムな色の変化とパルス効果を組み合わせ
+        # ランダムな色のリスト（明るい色を追加）
         thinking_colors = [
             (100, 200, 255),  # 薄い青
             (255, 200, 100),  # 薄いオレンジ
             (200, 255, 100),  # 薄い緑
             (255, 100, 200),  # 薄いピンク
             (200, 100, 255),  # 薄い紫
+            (255, 255, 100),  # 薄い黄色
+            (100, 255, 255),  # 薄いシアン
+            (255, 150, 150),  # 薄い赤
+            (150, 255, 150),  # 薄い明緑
+            (150, 150, 255),  # 薄い明青
         ]
         
-        # 時間ベースで色を選択
-        color_index = int(self.animation_time * speed) % len(thinking_colors)
-        next_color_index = (color_index + 1) % len(thinking_colors)
+        # 時間ベースでランダムに色を切り替え（補間なし）
+        color_switch_interval = 0.01 / speed  # 色切り替え間隔（秒）
+        time_index = int(self.animation_time / color_switch_interval)
         
-        # 色の補間
-        color_transition = math.fmod(self.animation_time * speed, 1.0)
-        current_color = lerp_color(
-            thinking_colors[color_index],
-            thinking_colors[next_color_index],
-            Easing.ease_in_out_cubic(color_transition)
-        )
+        # 時間インデックスをシードとして使用して、一貫したランダム性を確保
+        random.seed(time_index)
+        current_color = random.choice(thinking_colors)
+        
+        # シードをリセット（他の処理に影響しないように）
+        random.seed()
         
         # パルス効果と組み合わせ
         self.draw_pulsing_border(surface, current_color, speed * 0.7, border_width, margin)

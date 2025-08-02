@@ -146,7 +146,9 @@ class SpeakingState(BaseState):
         # 発話中の白い点滅外枠を描画（オーバーレイ）
         if self.is_speaking:
             lip_intensity = self.get_current_lip_intensity()
-            adjusted_speed = self.blink_speed * self.speaking_intensity * (0.5 + lip_intensity * 0.5)
+            # 基本速度を3倍にして高速化
+            base_speed = self.blink_speed * 3.0
+            adjusted_speed = base_speed * self.speaking_intensity * (0.5 + lip_intensity * 0.5)
             
             self.border_renderer.draw_blinking_border(
                 screen,

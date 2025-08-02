@@ -8,14 +8,14 @@ from utils.constants import States
 class ThinkingState(BaseState):
     """思考中状態（カラフルな外枠オーバーレイ）"""
     
-    def __init__(self):
+    def __init__(self, border_renderer: BorderRenderer):
         super().__init__(States.THINKING)
         
         # 設定を取得
         self.thinking_config = config.get_state_config('thinking')
         
-        # 外枠レンダラーを初期化
-        self.border_renderer = BorderRenderer()
+        # 共通の外枠レンダラーを使用
+        self.border_renderer = border_renderer
         
         # 思考中状態の設定
         self.border_width = self.thinking_config.get('border_width', 8)
@@ -34,9 +34,6 @@ class ThinkingState(BaseState):
         self.thinking_intensity = kwargs.get('intensity', 1.0)
         self.duration = kwargs.get('duration', None)  # ミリ秒
         
-        # 外枠アニメーションをリセット
-        self.border_renderer.animation_time = 0.0
-        
         print(f"思考中状態に移行しました（前の状態: {previous_state}, 強度: {self.thinking_intensity}）")
         if self.duration:
             print(f"思考時間: {self.duration/1000:.1f}秒")
@@ -50,8 +47,7 @@ class ThinkingState(BaseState):
         Returns:
             状態の更新情報
         """
-        # 外枠アニメーション更新
-        self.border_renderer.update(dt)
+        # 外枠アニメーション更新はmain.pyで実行される
         
         # 制限時間がある場合のチェック
         should_return_to_idle = False

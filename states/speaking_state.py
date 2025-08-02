@@ -8,15 +8,15 @@ from utils.constants import States
 class SpeakingState(BaseState):
     """発話中状態（白い点滅外枠オーバーレイ）"""
     
-    def __init__(self):
+    def __init__(self, border_renderer: BorderRenderer):
         super().__init__(States.SPEAKING)
         
         # 設定を取得
         self.color_config = config.get_color_config()
         self.speaking_config = config.get_state_config('speaking')
         
-        # 外枠レンダラーを初期化
-        self.border_renderer = BorderRenderer()
+        # 共通の外枠レンダラーを使用
+        self.border_renderer = border_renderer
         
         # 発話中状態の設定
         self.border_width = self.speaking_config.get('border_width', 8)
@@ -46,8 +46,7 @@ class SpeakingState(BaseState):
         if not self.lip_sync_pattern:
             self._generate_random_lip_sync_pattern()
         
-        # 外枠アニメーションをリセット
-        self.border_renderer.animation_time = 0.0
+        # リップシンクをリセット
         self.lip_sync_index = 0
         self.is_speaking = True
         
@@ -90,8 +89,7 @@ class SpeakingState(BaseState):
         Returns:
             状態の更新情報
         """
-        # 外枠アニメーション更新
-        self.border_renderer.update(dt)
+        # 外枠アニメーション更新はmain.pyで実行される
         
         # 疑似リップシンクの更新
         self._update_lip_sync()

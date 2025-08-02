@@ -12,6 +12,7 @@ from states.idle_state import IdleState
 from states.thinking_state import ThinkingState
 from states.speaking_state import SpeakingState
 from renderers.eye_renderer import EyeRenderer
+from renderers.border_renderer import BorderRenderer
 from animation.controller import AnimationController
 from utils.config import config
 from utils.events import event_system, EventType
@@ -94,6 +95,7 @@ class RobotFaceApp:
         
         # 共通のレンダラーとアニメーションコントローラー
         self.eye_renderer = EyeRenderer()
+        self.border_renderer = BorderRenderer()
         self.animation_controller = AnimationController(
             self.eye_config['width'],
             self.eye_config['height']
@@ -109,8 +111,8 @@ class RobotFaceApp:
         """状態を設定"""
         # 全ての状態を追加（共通レンダリングシステムを渡す）
         idle_state = IdleState()
-        thinking_state = ThinkingState()
-        speaking_state = SpeakingState()
+        thinking_state = ThinkingState(self.border_renderer)
+        speaking_state = SpeakingState(self.border_renderer)
         
         self.state_machine.add_state(idle_state)
         self.state_machine.add_state(thinking_state)
@@ -168,6 +170,7 @@ class RobotFaceApp:
         # 共通のアニメーション更新
         current_time = pygame.time.get_ticks()
         self.animation_controller.update(current_time)
+        self.border_renderer.update(dt)
         
         # 状態固有の更新
         self.state_machine.update(dt)

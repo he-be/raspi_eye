@@ -1,0 +1,58 @@
+# コミュニケーションロボット顔表示システム設定
+
+# 画面設定
+display:
+  width: 720
+  height: 480
+  fps: 60
+  fullscreen: true
+
+# 色設定
+colors:
+  black: [0, 0, 0]
+  white: [255, 255, 255]
+  cyan_glow: [0, 255, 255]
+  blue_white: [180, 200, 255]
+
+# 目の設定
+eye:
+  base_size_ratio: 0.333  # 画面の短辺に対する比率
+  width_ratio: 0.6        # ベースサイズに対する横幅比率
+  height_ratio: 1.4       # ベースサイズに対する縦幅比率（縦長）
+  spacing_ratio: 1.2      # ベースサイズに対する目の間隔比率
+
+# アニメーション設定
+animation:
+  # 視線移動
+  look_interval_min: 1500     # 最小間隔（ミリ秒）
+  look_interval_max: 4000     # 最大間隔（ミリ秒）
+  move_speed: 0.03           # 移動速度
+
+  # まばたき
+  blink_interval_min: 2000   # 最小まばたき間隔
+  blink_interval_max: 6000   # 最大まばたき間隔
+  blink_duration: 200        # まばたき持続時間
+  blink_height_ratio: 0.2    # まばたき時の高さ比率
+
+# キャッシュ設定
+cache:
+  directory: "~/.cyber_eyes_cache"
+  version: "v2.0"
+
+# コマンドインターフェース設定
+command_interface:
+  host: "localhost"
+  port: 8888
+  buffer_size: 1024
+
+# 状態別設定
+states:
+  thinking:
+    border_width: 8
+    color_change_speed: 0.05
+    pulse_speed: 0.02
+  
+  speaking:
+    border_width: 8
+    blink_speed: 0.1
+    intensity_default: 1.0

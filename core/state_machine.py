@@ -108,6 +108,10 @@ class StateMachine:
     def current_state(self) -> Optional[BaseState]:
         """現在の状態オブジェクトを取得"""
         return self._current_state
+
+    def get_current_state(self):
+        """現在の状態オブジェクトを取得（エイリアス）"""
+        return self.current_state
         
     def get_available_states(self) -> list:
         """利用可能な状態のリストを取得"""

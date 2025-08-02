@@ -3,6 +3,7 @@
 import pygame
 import sys
 import os
+import asyncio
 
 # パッケージのルートディレクトリをPythonパスに追加
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,7 +21,7 @@ from utils.events import event_system, EventType
 class RobotFaceApp:
     """ロボット顔表示アプリケーションのメインクラス"""
     
-    def __init__(self):
+    def __init__(self, enable_command_interface: bool = True):
         # 設定を読み込み
         self.display_config = config.get_display_config()
         self.eye_config = config.get_eye_config()
@@ -43,6 +44,13 @@ class RobotFaceApp:
         self.state_machine = StateMachine()
         self.setup_states()
         
+        # コマンドインターフェース
+        self.command_interface = None
+        self.enable_command_interface = enable_command_interface
+        if enable_command_interface:
+            from core.command_interface import CommandInterface
+            self.command_interface = CommandInterface()
+        
         # イベントリスナーの設定
         self.setup_event_listeners()
         
@@ -52,6 +60,9 @@ class RobotFaceApp:
         print("ロボット顔表示システムを初期化しました")
         print(f"解像度: {self.display_config['width']}x{self.display_config['height']}")
         print(f"FPS: {self.fps}")
+        if self.command_interface:
+            command_config = config.get_command_interface_config()
+            print(f"コマンドインターフェース: {command_config['host']}:{command_config['port']}")
         print("\n=== 操作方法 ===")
         print("ESC: 終了")
         print("F11: フルスクリーン切り替え")
@@ -126,7 +137,34 @@ class RobotFaceApp:
         def on_state_changed(event):
             print(f"状態変更: {event.data['previous_state']} -> {event.data['current_state']}")
         
+        def on_command_received(event):
+            """外部コマンド受信時の処理"""
+            command_data = event.data
+            command = command_data.get('command')
+            
+            if command == 'change_state':
+                state_name = command_data.get('state')
+                parameters = command_data.get('parameters', {})
+                
+                # 状態変更を実行
+                self.state_machine.change_state(state_name, **parameters)
+                print(f"コマンドで状態変更: {state_name}")
+                
+            elif command == 'set_parameter':
+                parameters = command_data.get('parameters', {})
+                # パラメータ設定を実行（現在の状態に応じて）
+                current_state = self.state_machine.get_current_state()
+                if current_state and hasattr(current_state, 'set_parameters'):
+                    current_state.set_parameters(parameters)
+                print(f"パラメータ設定: {parameters}")
+                
+            elif command == 'shutdown':
+                print("シャットダウンコマンドを受信しました")
+                self.running = False
+        
         event_system.subscribe(EventType.STATE_CHANGED, on_state_changed)
+        if self.command_interface:
+            event_system.subscribe(EventType.COMMAND_RECEIVED, on_command_received)
     
     def handle_events(self):
         """イベント処理"""
@@ -217,6 +255,46 @@ class RobotFaceApp:
     
     def run(self):
         """メインループ"""
+        if self.command_interface:
+            # asyncioでコマンドサーバーと同時実行
+            import asyncio
+            asyncio.run(self._run_with_command_interface())
+        else:
+            # 通常のゲームループ
+            self._run_game_loop()
+    
+    async def _run_with_command_interface(self):
+        """コマンドインターフェース付きでの実行"""
+        import asyncio
+        
+        # コマンドサーバータスクを開始
+        server_task = asyncio.create_task(self.command_interface.start_server())
+        
+        # ゲームループタスクを開始
+        game_task = asyncio.create_task(self._run_async_game_loop())
+        
+        try:
+            # 両方のタスクを並行実行（どちらかが終了すると両方停止）
+            done, pending = await asyncio.wait([server_task, game_task], return_when=asyncio.FIRST_COMPLETED)
+            
+            # 未完了のタスクをキャンセル
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                    
+        except KeyboardInterrupt:
+            print("\nキーボード割り込みで終了します")
+        finally:
+            # サーバーを停止
+            if self.command_interface:
+                await self.command_interface.stop_server()
+            self.cleanup()
+    
+    async def _run_async_game_loop(self):
+        """非同期ゲームループ"""
         print("アプリケーションを開始します...")
         
         last_time = pygame.time.get_ticks()
@@ -234,8 +312,29 @@ class RobotFaceApp:
             
             # フレームレート制御
             self.clock.tick(self.fps)
+            
+            # 短時間の非同期待機（他のタスクに制御を譲る）
+            await asyncio.sleep(0.001)
+    
+    def _run_game_loop(self):
+        """通常のゲームループ"""
+        print("アプリケーションを開始します...")
         
-        self.cleanup()
+        last_time = pygame.time.get_ticks()
+        
+        while self.running:
+            # デルタタイムを計算
+            current_time = pygame.time.get_ticks()
+            dt = (current_time - last_time) / 1000.0  # 秒に変換
+            last_time = current_time
+            
+            # 処理
+            self.handle_events()
+            self.update(dt)
+            self.render()
+            
+            # フレームレート制御
+            self.clock.tick(self.fps)
     
     def cleanup(self):
         """終了処理"""
@@ -245,8 +344,18 @@ class RobotFaceApp:
 
 def main():
     """メイン関数"""
+    import argparse
+    
+    # コマンドライン引数をパース
+    parser = argparse.ArgumentParser(description='ロボット顔表示システム')
+    parser.add_argument('--no-server', action='store_true', 
+                       help='コマンドインターフェースを無効化')
+    args = parser.parse_args()
+    
     try:
-        app = RobotFaceApp()
+        # コマンドインターフェースの有効/無効を設定
+        enable_command_interface = not args.no_server
+        app = RobotFaceApp(enable_command_interface=enable_command_interface)
         app.run()
     except KeyboardInterrupt:
         print("\nキーボード割り込みで終了しました")

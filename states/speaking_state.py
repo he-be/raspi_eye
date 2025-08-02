@@ -1,39 +1,22 @@
 import pygame
 from typing import Dict, Any, List
 from states.base_state import BaseState
-from renderers.eye_renderer import EyeRenderer
 from renderers.border_renderer import BorderRenderer
-from animation.controller import AnimationController
 from utils.config import config
 from utils.constants import States
 
 class SpeakingState(BaseState):
-    """発話中状態（目のアニメーション＋白い点滅外枠）"""
+    """発話中状態（白い点滅外枠オーバーレイ）"""
     
     def __init__(self):
         super().__init__(States.SPEAKING)
         
         # 設定を取得
-        self.display_config = config.get_display_config()
-        self.eye_config = config.get_eye_config()
         self.color_config = config.get_color_config()
         self.speaking_config = config.get_state_config('speaking')
         
-        # 目の中心座標を計算
-        screen_width = self.display_config['width']
-        screen_height = self.display_config['height']
-        eye_spacing = self.eye_config['spacing']
-        
-        self.left_eye_center = (screen_width // 2 - eye_spacing, screen_height // 2)
-        self.right_eye_center = (screen_width // 2 + eye_spacing, screen_height // 2)
-        
-        # レンダラーを初期化
-        self.eye_renderer = EyeRenderer()
+        # 外枠レンダラーを初期化
         self.border_renderer = BorderRenderer()
-        self.animation_controller = AnimationController(
-            self.eye_config['width'],
-            self.eye_config['height']
-        )
         
         # 発話中状態の設定
         self.border_width = self.speaking_config.get('border_width', 8)
@@ -49,12 +32,6 @@ class SpeakingState(BaseState):
         # 疑似リップシンク用のデータ
         self.lip_sync_pattern = []
         self.lip_sync_index = 0
-        
-        # テクスチャの事前読み込み
-        self.eye_renderer.preload_all_textures(
-            self.eye_config['width'],
-            self.eye_config['height']
-        )
     
     def enter(self, previous_state: str = None, **kwargs):
         """発話中状態開始時の処理"""
@@ -69,8 +46,7 @@ class SpeakingState(BaseState):
         if not self.lip_sync_pattern:
             self._generate_random_lip_sync_pattern()
         
-        # アニメーションをリセット
-        self.animation_controller.reset()
+        # 外枠アニメーションをリセット
         self.border_renderer.animation_time = 0.0
         self.lip_sync_index = 0
         self.is_speaking = True
@@ -114,10 +90,7 @@ class SpeakingState(BaseState):
         Returns:
             状態の更新情報
         """
-        current_time = pygame.time.get_ticks()
-        
-        # アニメーション更新
-        self.animation_controller.update(current_time)
+        # 外枠アニメーション更新
         self.border_renderer.update(dt)
         
         # 疑似リップシンクの更新
@@ -134,12 +107,8 @@ class SpeakingState(BaseState):
             should_return_to_idle = True
             self.is_speaking = False
         
-        # アニメーション状態を取得
-        animation_state = self.animation_controller.get_animation_state(current_time)
-        
         return {
             'state': self.name,
-            'animation': animation_state,
             'speaking_intensity': self.speaking_intensity,
             'is_speaking': self.is_speaking,
             'elapsed_time': self.get_elapsed_time(),
@@ -171,41 +140,12 @@ class SpeakingState(BaseState):
         return self.lip_sync_pattern[self.lip_sync_index]
     
     def render(self, screen: pygame.Surface):
-        """発話中状態の描画処理
+        """発話中状態の描画処理（外枠オーバーレイのみ）
         
         Args:
             screen: 描画対象のサーフェス
         """
-        # 背景をクリア
-        screen.fill(self.color_config['black'])
-        
-        # 現在のアニメーション状態を取得
-        current_time = pygame.time.get_ticks()
-        animation_state = self.animation_controller.get_animation_state(current_time)
-        
-        eye_offset = animation_state['eye_offset']
-        blink_ratio = animation_state['blink_ratio']
-        
-        # 両目を描画（通常のアイドル状態と同じ）
-        self.eye_renderer.draw_eye(
-            screen,
-            self.left_eye_center,
-            eye_offset,
-            self.eye_config['width'],
-            self.eye_config['height'],
-            blink_ratio
-        )
-        
-        self.eye_renderer.draw_eye(
-            screen,
-            self.right_eye_center,
-            eye_offset,
-            self.eye_config['width'],
-            self.eye_config['height'],
-            blink_ratio
-        )
-        
-        # 発話中の白い点滅外枠を描画
+        # 発話中の白い点滅外枠を描画（オーバーレイ）
         if self.is_speaking:
             lip_intensity = self.get_current_lip_intensity()
             adjusted_speed = self.blink_speed * self.speaking_intensity * (0.5 + lip_intensity * 0.5)
@@ -231,12 +171,8 @@ class SpeakingState(BaseState):
         Returns:
             イベントが処理されたかどうか
         """
-        # スペースキーでまばたき
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                self.animation_controller.force_blink()
-                return True
-            elif event.key == pygame.K_UP:
+            if event.key == pygame.K_UP:
                 # 発話強度を上げる
                 self.speaking_intensity = min(2.0, self.speaking_intensity + 0.1)
                 print(f"発話強度: {self.speaking_intensity:.1f}")

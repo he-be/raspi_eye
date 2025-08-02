@@ -11,6 +11,8 @@ from core.state_machine import StateMachine
 from states.idle_state import IdleState
 from states.thinking_state import ThinkingState
 from states.speaking_state import SpeakingState
+from renderers.eye_renderer import EyeRenderer
+from animation.controller import AnimationController
 from utils.config import config
 from utils.events import event_system, EventType
 
@@ -20,6 +22,8 @@ class RobotFaceApp:
     def __init__(self):
         # 設定を読み込み
         self.display_config = config.get_display_config()
+        self.eye_config = config.get_eye_config()
+        self.color_config = config.get_color_config()
         
         # Pygame初期化
         pygame.init()
@@ -30,6 +34,9 @@ class RobotFaceApp:
         # クロック設定
         self.clock = pygame.time.Clock()
         self.fps = self.display_config['fps']
+        
+        # 共通のレンダリングとアニメーションシステム
+        self.setup_rendering_system()
         
         # 状態機械の初期化
         self.state_machine = StateMachine()
@@ -75,9 +82,32 @@ class RobotFaceApp:
         pygame.display.set_caption("Communication Robot Face Display")
         pygame.mouse.set_visible(False)
     
+    def setup_rendering_system(self):
+        """共通のレンダリングとアニメーションシステムを設定"""
+        # 目の中心座標を計算
+        screen_width = self.display_config['width']
+        screen_height = self.display_config['height']
+        eye_spacing = self.eye_config['spacing']
+        
+        self.left_eye_center = (screen_width // 2 - eye_spacing, screen_height // 2)
+        self.right_eye_center = (screen_width // 2 + eye_spacing, screen_height // 2)
+        
+        # 共通のレンダラーとアニメーションコントローラー
+        self.eye_renderer = EyeRenderer()
+        self.animation_controller = AnimationController(
+            self.eye_config['width'],
+            self.eye_config['height']
+        )
+        
+        # テクスチャの事前読み込み
+        self.eye_renderer.preload_all_textures(
+            self.eye_config['width'],
+            self.eye_config['height']
+        )
+    
     def setup_states(self):
         """状態を設定"""
-        # 全ての状態を追加
+        # 全ての状態を追加（共通レンダリングシステムを渡す）
         idle_state = IdleState()
         thinking_state = ThinkingState()
         speaking_state = SpeakingState()
@@ -122,6 +152,9 @@ class RobotFaceApp:
                     current_state = self.state_machine.current_state_name
                     self.state_machine.change_state("idle")
                     print(f"状態をリセットしました: {current_state} -> idle")
+                elif event.key == pygame.K_SPACE:
+                    # 強制まばたき（全状態で共通）
+                    self.animation_controller.force_blink()
             
             # 現在の状態にイベントを転送
             self.state_machine.handle_event(event)
@@ -132,12 +165,52 @@ class RobotFaceApp:
         Args:
             dt: デルタタイム（秒）
         """
+        # 共通のアニメーション更新
+        current_time = pygame.time.get_ticks()
+        self.animation_controller.update(current_time)
+        
+        # 状態固有の更新
         self.state_machine.update(dt)
     
     def render(self):
         """描画処理"""
+        # 背景をクリア
+        self.screen.fill(self.color_config['black'])
+        
+        # 共通の目の描画
+        self.render_eyes()
+        
+        # 状態固有のオーバーレイ描画
         self.state_machine.render(self.screen)
+        
         pygame.display.flip()
+    
+    def render_eyes(self):
+        """共通の目の描画"""
+        current_time = pygame.time.get_ticks()
+        animation_state = self.animation_controller.get_animation_state(current_time)
+        
+        eye_offset = animation_state['eye_offset']
+        blink_ratio = animation_state['blink_ratio']
+        
+        # 両目を描画
+        self.eye_renderer.draw_eye(
+            self.screen,
+            self.left_eye_center,
+            eye_offset,
+            self.eye_config['width'],
+            self.eye_config['height'],
+            blink_ratio
+        )
+        
+        self.eye_renderer.draw_eye(
+            self.screen,
+            self.right_eye_center,
+            eye_offset,
+            self.eye_config['width'],
+            self.eye_config['height'],
+            blink_ratio
+        )
     
     def run(self):
         """メインループ"""

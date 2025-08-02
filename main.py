@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core.state_machine import StateMachine
 from states.idle_state import IdleState
+from states.thinking_state import ThinkingState
+from states.speaking_state import SpeakingState
 from utils.config import config
 from utils.events import event_system, EventType
 
@@ -42,7 +44,17 @@ class RobotFaceApp:
         print("ロボット顔表示システムを初期化しました")
         print(f"解像度: {self.display_config['width']}x{self.display_config['height']}")
         print(f"FPS: {self.fps}")
-        print("ESCキーで終了します")
+        print("\n=== 操作方法 ===")
+        print("ESC: 終了")
+        print("F11: フルスクリーン切り替え")
+        print("1: アイドル状態")
+        print("2: 思考中状態")
+        print("3: 発話中状態")
+        print("R: アイドル状態にリセット")
+        print("SPACE: まばたき")
+        print("↑/↓: 強度調整（思考中・発話中状態で）")
+        print("ENTER: 発話停止/再開（発話中状態で）")
+        print("================\n")
     
     def setup_display(self):
         """ディスプレイを設定"""
@@ -65,9 +77,14 @@ class RobotFaceApp:
     
     def setup_states(self):
         """状態を設定"""
-        # アイドル状態を追加
+        # 全ての状態を追加
         idle_state = IdleState()
+        thinking_state = ThinkingState()
+        speaking_state = SpeakingState()
+        
         self.state_machine.add_state(idle_state)
+        self.state_machine.add_state(thinking_state)
+        self.state_machine.add_state(speaking_state)
         
         # 初期状態をアイドルに設定
         self.state_machine.change_state("idle")
@@ -91,6 +108,20 @@ class RobotFaceApp:
                 elif event.key == pygame.K_F11:
                     # フルスクリーン切り替え
                     pygame.display.toggle_fullscreen()
+                elif event.key == pygame.K_1:
+                    # アイドル状態に切り替え
+                    self.state_machine.change_state("idle")
+                elif event.key == pygame.K_2:
+                    # 思考中状態に切り替え
+                    self.state_machine.change_state("thinking", intensity=1.0)
+                elif event.key == pygame.K_3:
+                    # 発話中状態に切り替え
+                    self.state_machine.change_state("speaking", intensity=1.0)
+                elif event.key == pygame.K_r:
+                    # 現在の状態をリセットしてアイドルに戻る
+                    current_state = self.state_machine.current_state_name
+                    self.state_machine.change_state("idle")
+                    print(f"状態をリセットしました: {current_state} -> idle")
             
             # 現在の状態にイベントを転送
             self.state_machine.handle_event(event)

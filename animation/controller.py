@@ -1,9 +1,9 @@
 import pygame
 import random
 from typing import Tuple
-from ..utils.config import config
-from ..utils.constants import BLINK_PRESETS
-from .easing import lerp, Easing
+from utils.config import config
+from utils.constants import BLINK_PRESETS
+from animation.easing import lerp, Easing
 
 class BlinkController:
     """まばたきアニメーションを制御するクラス"""

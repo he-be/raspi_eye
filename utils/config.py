@@ -1,7 +1,7 @@
 import yaml
 import os
 from typing import Dict, Any, Optional
-from .constants import *
+from utils.constants import *
 
 class Config:
     def __init__(self, config_path: str = "config.yaml"):

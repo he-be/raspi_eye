@@ -1,8 +1,8 @@
 from typing import Dict, Optional, Any
 import pygame
-from ..states.base_state import BaseState
-from ..utils.events import event_system, EventType
-from ..utils.constants import States
+from states.base_state import BaseState
+from utils.events import event_system, EventType
+from utils.constants import States
 
 class StateMachine:
     """状態機械の管理クラス"""

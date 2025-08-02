@@ -2,8 +2,8 @@ import pygame
 import os
 import colorsys
 from typing import Dict, Tuple
-from ..utils.config import config
-from ..utils.constants import BLINK_PRESETS
+from utils.config import config
+from utils.constants import BLINK_PRESETS
 
 class EyeRenderer:
     """目の描画を担当するレンダラー"""

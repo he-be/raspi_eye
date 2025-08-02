@@ -10,7 +10,7 @@ class CommandInterface:
     
     def __init__(self):
         self.command_config = config.get_command_interface_config()
-        self.host = self.command_config.get('host', 'localhost')
+        self.host = self.command_config.get('host', '0.0.0.0')
         self.port = self.command_config.get('port', 8888)
         self.buffer_size = self.command_config.get('buffer_size', 1024)
         

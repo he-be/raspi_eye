@@ -8,7 +8,7 @@ import sys
 class RobotFaceClient:
     """ロボット顔表示システムのテストクライアント"""
     
-    def __init__(self, host='localhost', port=8888):
+    def __init__(self, host='192.168.0.198', port=8888):
         self.host = host
         self.port = port
         self.socket = None

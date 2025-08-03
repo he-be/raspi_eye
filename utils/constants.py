@@ -42,6 +42,7 @@ class States:
     IDLE = "idle"
     THINKING = "thinking" 
     SPEAKING = "speaking"
+    SLEEPING = "sleeping"
 
 # コマンドインターフェース設定
 COMMAND_HOST = "localhost"

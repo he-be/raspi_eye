@@ -69,6 +69,7 @@ class RobotFaceApp:
         print("1: アイドル状態")
         print("2: 思考中状態")
         print("3: 発話中状態")
+        print("4: 休止状態")
         print("R: アイドル状態にリセット")
         print("SPACE: まばたき")
         print("↑/↓: 強度調整（思考中・発話中状態で）")
@@ -125,9 +126,13 @@ class RobotFaceApp:
         thinking_state = ThinkingState(self.border_renderer)
         speaking_state = SpeakingState(self.border_renderer)
         
+        from states.sleeping_state import SleepingState
+        sleeping_state = SleepingState()
+        
         self.state_machine.add_state(idle_state)
         self.state_machine.add_state(thinking_state)
         self.state_machine.add_state(speaking_state)
+        self.state_machine.add_state(sleeping_state)
         
         # 初期状態をアイドルに設定
         self.state_machine.change_state("idle")
@@ -187,6 +192,9 @@ class RobotFaceApp:
                 elif event.key == pygame.K_3:
                     # 発話中状態に切り替え
                     self.state_machine.change_state("speaking", intensity=1.0)
+                elif event.key == pygame.K_4:
+                    # 休止状態に切り替え
+                    self.state_machine.change_state("sleeping")
                 elif event.key == pygame.K_r:
                     # 現在の状態をリセットしてアイドルに戻る
                     current_state = self.state_machine.current_state_name
@@ -229,29 +237,60 @@ class RobotFaceApp:
     def render_eyes(self):
         """共通の目の描画"""
         current_time = pygame.time.get_ticks()
-        animation_state = self.animation_controller.get_animation_state(current_time)
+        current_state_name = self.state_machine.current_state_name
         
-        eye_offset = animation_state['eye_offset']
-        blink_ratio = animation_state['blink_ratio']
-        
-        # 両目を描画
-        self.eye_renderer.draw_eye(
-            self.screen,
-            self.left_eye_center,
-            eye_offset,
-            self.eye_config['width'],
-            self.eye_config['height'],
-            blink_ratio
-        )
-        
-        self.eye_renderer.draw_eye(
-            self.screen,
-            self.right_eye_center,
-            eye_offset,
-            self.eye_config['width'],
-            self.eye_config['height'],
-            blink_ratio
-        )
+        # 休止状態の場合は円弧を描画
+        if current_state_name == "sleeping":
+            # 休止状態の場合、呼吸アニメーションのオフセットを取得
+            current_state = self.state_machine.get_current_state()
+            breathing_offset = 0
+            if current_state and hasattr(current_state, 'get_breathing_offset'):
+                breathing_offset = current_state.get_breathing_offset()
+            
+            # 目のオフセット（休止状態では視線移動なし）
+            eye_offset = pygame.math.Vector2(0, breathing_offset)
+            
+            # 両目を円弧で描画
+            self.eye_renderer.draw_sleeping_eye(
+                self.screen,
+                self.left_eye_center,
+                eye_offset,
+                self.eye_config['width'],
+                self.eye_config['height']
+            )
+            
+            self.eye_renderer.draw_sleeping_eye(
+                self.screen,
+                self.right_eye_center,
+                eye_offset,
+                self.eye_config['width'],
+                self.eye_config['height']
+            )
+        else:
+            # 通常の楕円形の目を描画
+            animation_state = self.animation_controller.get_animation_state(current_time)
+            
+            eye_offset = animation_state['eye_offset']
+            blink_ratio = animation_state['blink_ratio']
+            
+            # 両目を描画
+            self.eye_renderer.draw_eye(
+                self.screen,
+                self.left_eye_center,
+                eye_offset,
+                self.eye_config['width'],
+                self.eye_config['height'],
+                blink_ratio
+            )
+            
+            self.eye_renderer.draw_eye(
+                self.screen,
+                self.right_eye_center,
+                eye_offset,
+                self.eye_config['width'],
+                self.eye_config['height'],
+                blink_ratio
+            )
     
     def run(self):
         """メインループ"""

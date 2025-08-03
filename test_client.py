@@ -118,6 +118,7 @@ def interactive_mode():
         print("  1: アイドル状態に変更")
         print("  2: 思考中状態に変更")
         print("  3: 発話中状態に変更")
+        print("  4: 休止状態に変更")
         print("  s: ステータス取得")
         print("  p: Ping送信")
         print("  q: 終了")
@@ -134,6 +135,8 @@ def interactive_mode():
                     client.change_state('thinking', intensity=1.0)
                 elif cmd == '3':
                     client.change_state('speaking', intensity=1.0)
+                elif cmd == '4':
+                    client.change_state('sleeping')
                 elif cmd == 's':
                     client.get_status()
                 elif cmd == 'p':
@@ -177,6 +180,7 @@ def automated_demo():
             ('idle', {}),
             ('thinking', {'intensity': 1.2}),
             ('speaking', {'intensity': 0.8}),
+            ('sleeping', {}),
             ('idle', {})
         ]
         
